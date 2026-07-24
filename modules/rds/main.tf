@@ -43,8 +43,8 @@ resource "aws_db_instance" "this" {
   instance_class = var.instance_class
 
   allocated_storage = var.allocated_storage
-  storage_type       = "gp3"
-  storage_encrypted  = true
+  storage_type      = "gp3"
+  storage_encrypted = true
 
   db_name  = var.db_name
   username = var.db_username
@@ -58,7 +58,7 @@ resource "aws_db_instance" "this" {
   publicly_accessible = false
   skip_final_snapshot = var.skip_final_snapshot
 
-  backup_retention_period = 7
+  backup_retention_period = 1
 
   tags = {
     Name = "${local.name}-db"
