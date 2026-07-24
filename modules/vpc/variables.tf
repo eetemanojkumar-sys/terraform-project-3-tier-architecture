@@ -1,0 +1,33 @@
+variable "project_name" {
+  type = string
+}
+
+variable "environment" {
+  type = string
+}
+
+variable "vpc_cidr" {
+  type = string
+}
+
+variable "azs" {
+  type = list(string)
+}
+
+variable "public_subnet_cidrs" {
+  type = list(string)
+}
+
+variable "private_app_subnet_cidrs" {
+  type = list(string)
+}
+
+variable "private_db_subnet_cidrs" {
+  type = list(string)
+}
+
+variable "single_nat_gateway" {
+  description = "If true, create one NAT gateway for all AZs (cheaper). If false, one per AZ (HA)."
+  type        = bool
+  default     = true
+}
