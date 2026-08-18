@@ -1,0 +1,15 @@
+---
+- name: Update DNF cache
+  ansible.builtin.dnf:
+    update_cache: true
+
+- name: Install common packages
+  ansible.builtin.dnf:
+    name:
+      - git
+      - curl
+      - wget
+      - unzip
+      - vim-enhanced
+      - htop
+    state: present
