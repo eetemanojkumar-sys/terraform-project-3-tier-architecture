@@ -1,12 +1,10 @@
-pipeline {
-    agent {
-        docker {
-            image 'ubuntu:24.04'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-            reuseNode true
-        }
-    }
-
+agent {
+    docker {
+        image 'ubuntu:24.04'
+        args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
+        reuseNode true
+       }
+    }           
     stages {
 
         stage('Environment Check') {
