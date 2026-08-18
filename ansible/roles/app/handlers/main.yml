@@ -1,0 +1,7 @@
+---
+- name: Restart application
+  ansible.builtin.systemd:
+    name: three-tier-app
+    state: restarted
+    daemon_reload: true
+    enabled: true

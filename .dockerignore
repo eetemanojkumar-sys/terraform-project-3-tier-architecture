@@ -1,0 +1,8 @@
+.git
+.gitignore
+.terraform
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+ansible/terraform_outputs.json
+ansible/group_vars/all/generated.yml

@@ -1,7 +1,8 @@
 ---
-- name: Configure Terraform-created application tier
-  hosts: app
+- name: Configure application servers
+  hosts: name_threetier_dev_app
   become: true
+
   roles:
     - common
     - app

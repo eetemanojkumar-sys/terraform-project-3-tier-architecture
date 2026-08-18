@@ -53,12 +53,17 @@ resource "aws_launch_template" "app" {
   instance_type = var.instance_type
   key_name      = var.key_name != "" ? var.key_name : null
 
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ssm.name
+  }
+
   vpc_security_group_ids = [aws_security_group.ec2.id]
 
   user_data = var.user_data != "" ? base64encode(var.user_data) : null
 
   tag_specifications {
     resource_type = "instance"
+
     tags = {
       Name = "${local.name}-app"
     }

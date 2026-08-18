@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: three-tier-app
+  labels:
+    app: three-tier-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: three-tier-app
+  template:
+    metadata:
+      labels:
+        app: three-tier-app
+    spec:
+      containers:
+        - name: three-tier-app
+          image: three-tier-app:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10

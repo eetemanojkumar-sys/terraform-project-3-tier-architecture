@@ -1,4 +1,4 @@
-DB_HOST={{ rds_endpoint.split(':')[0] }}
-DB_NAME={{ rds_db_name }}
-DB_PORT=3306
-APP_PORT={{ app_port }}
+APP_NAME=three-tier-app
+APP_PORT=8080
+DB_HOST={{ rds_endpoint | default('') | regex_replace(':.*$', '') }}
+DB_NAME={{ rds_db_name | default('appdb') }}

@@ -1,15 +1,24 @@
 ---
-- name: Update DNF cache
+- name: Update package cache
   ansible.builtin.dnf:
     update_cache: true
 
 - name: Install common packages
   ansible.builtin.dnf:
     name:
-      - git
-      - curl
       - wget
+      - git
       - unzip
-      - vim-enhanced
+      - vim
       - htop
     state: present
+
+- name: Check Git version
+  ansible.builtin.command:
+    cmd: git --version
+  register: git_version
+  changed_when: false
+
+- name: Display Git version
+  ansible.builtin.debug:
+    msg: "{{ git_version.stdout }}"

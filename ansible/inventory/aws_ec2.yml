@@ -1,17 +1,21 @@
 plugin: amazon.aws.aws_ec2
+
 regions:
   - ap-south-1
+
 filters:
   instance-state-name: running
+  tag:Name: threetier-dev-app
+
+hostnames:
+  - instance-id
 
 keyed_groups:
   - key: tags.Name
     prefix: name
 
-# The Terraform EC2 module currently tags instances as <project>-<environment>-app.
-# These groups let Ansible target the application tier without static IPs.
-groups:
-  app: "tags.Name is defined and tags.Name.endswith('-app')"
-
 compose:
-  ansible_host: private_ip_address
+  ansible_connection: "'amazon.aws.aws_ssm'"
+  ansible_aws_ssm_instance_id: instance_id
+  ansible_aws_ssm_region: "'ap-south-1'"
+  ansible_aws_ssm_bucket_name: "'manoj-ansible-ssm-2026-710959681253'"
