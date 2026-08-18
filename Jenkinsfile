@@ -11,7 +11,7 @@ pipeline {
           -v /usr/local/bin/helm:/usr/local/bin/helm:ro
           -v /snap/bin/kubectl:/usr/local/bin/kubectl:ro
           -v /var/lib/jenkins/.kube:/root/.kube:ro
-          -v /home/ubuntu/.minikube:/home/ubuntu/.minikube:ro
+          -v /home/ubuntu/.minikube:/home/ubuntu/.minikube:rw
         '''
         reuseNode true
         }
