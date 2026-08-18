@@ -1,0 +1,43 @@
+replicaCount: 2
+
+image:
+  repository: three-tier-app
+  tag: "1.0"
+  pullPolicy: Never
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+
+containerPort: 8080
+
+config:
+  appName: "Three Tier Application"
+  environment: "dev"
+  appPort: "8080"
+
+secret:
+  dbName: "appdb"
+  dbUser: "appuser"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: three-tier.local
+  path: /
+  pathType: Prefix
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPU: 70
