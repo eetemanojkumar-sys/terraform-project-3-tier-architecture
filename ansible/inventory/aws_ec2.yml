@@ -1,0 +1,17 @@
+plugin: amazon.aws.aws_ec2
+regions:
+  - ap-south-1
+filters:
+  instance-state-name: running
+
+keyed_groups:
+  - key: tags.Name
+    prefix: name
+
+# The Terraform EC2 module currently tags instances as <project>-<environment>-app.
+# These groups let Ansible target the application tier without static IPs.
+groups:
+  app: "tags.Name is defined and tags.Name.endswith('-app')"
+
+compose:
+  ansible_host: private_ip_address
