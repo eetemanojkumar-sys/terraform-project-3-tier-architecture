@@ -1,12 +1,20 @@
 pipeline {
 
-    agent {
-        docker {
-            image 'ubuntu:24.04'
-            args '-u root -v /var/run/docker.sock:/var/run/docker.sock'
-            reuseNode true
-        }
-    }
+  agent {
+     docker {
+          image 'ubuntu:24.04'
+          args '''
+            -u root
+            -v /var/run/docker.sock:/var/run/docker.sock
+            -v /usr/local/bin/minikube:/usr/local/bin/minikube:ro
+            -v /usr/local/bin/helm:/usr/local/bin/helm:ro
+            -v /snap/bin/kubectl:/usr/local/bin/kubectl:ro
+            -v /var/lib/jenkins/.kube:/root/.kube:ro
+            -v /home/ubuntu/.minikube:/home/ubuntu/.minikube:ro
+          '''
+          reuseNode true
+       }
+  }
 
     environment {
         APP_NAME = 'three-tier-app'
@@ -169,37 +177,45 @@ pipeline {
         }
 
         stage('Load Image into Minikube') {
-            steps {
-                sh '''
-                    echo "Loading image into Minikube..."
+             steps {
+               sh '''
+                 set -e
 
-                    minikube status
+                   echo "Loading image into Minikube..."
 
-                    minikube image load ${APP_NAME}:${IMAGE_TAG}
-                '''
-            }
-        }
+                   export MINIKUBE_HOME=/home/ubuntu/.minikube
 
-        stage('Helm Deploy') {
-            steps {
-                sh '''
-                    echo "Deploying application with Helm..."
+                   minikube status
 
-                    helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
-                      --set image.repository=${APP_NAME} \
-                      --set image.tag=${IMAGE_TAG} \
-                      --set image.pullPolicy=Never
+                   minikube image load ${APP_NAME}:${IMAGE_TAG}
 
-                    kubectl rollout status \
-                      deployment/${HELM_RELEASE}-${HELM_RELEASE#${HELM_RELEASE}} \
-                      --timeout=120s || true
+                    echo "Image loaded successfully!"
+               '''
+          }
+       }
 
-                    helm list
-                    kubectl get pods
-                '''
-            }
-        }
+       stage('Helm Deploy') {
+    steps {
+        sh '''
+            set -e
 
+            export KUBECONFIG=/root/.kube/config
+            export MINIKUBE_HOME=/home/ubuntu/.minikube
+
+            echo "Deploying application with Helm..."
+
+            helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
+              --set image.repository=${APP_NAME} \
+              --set image.tag=${IMAGE_TAG} \
+              --set image.pullPolicy=Never
+
+            helm list
+
+            kubectl get pods
+            kubectl get svc
+        '''
+    }
+  }
         stage('Kubernetes Verification') {
             steps {
                 sh '''
