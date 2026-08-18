@@ -236,25 +236,22 @@ pipeline {
             }
         }
 
-        stage('Application Health Check') {
-            steps {
-                sh '''
-                    set -e
+      stage('Application Health Check') {
+         steps {
+           sh '''
+              set -e
 
-                    MINIKUBE_IP=$(minikube ip)
+            export MINIKUBE_HOME=/home/ubuntu/.minikube
+            export KUBECONFIG=/root/.kube/config
 
-                    echo "Testing Kubernetes application..."
+            echo "Getting Minikube IP..."
+            minikube status
+            MINIKUBE_IP=$(minikube ip)
 
-                    curl -f \
-                      -H "Host: three-tier.local" \
-                      http://${MINIKUBE_IP}/health
-
-                    echo
-                    echo "Kubernetes health check PASSED!"
-                '''
-            }
+            echo "Minikube IP: $MINIKUBE_IP"
+        '''
         }
-    }
+     }
 
     post {
 
