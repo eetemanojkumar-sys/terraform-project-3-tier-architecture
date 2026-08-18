@@ -53,8 +53,11 @@ pipeline {
                     unzip -o /tmp/terraform.zip -d /usr/local/bin
 
                     terraform version
+
                     terraform fmt -check -recursive
+
                     terraform init -backend=false
+
                     terraform validate
                 '''
             }
@@ -68,6 +71,7 @@ pipeline {
                     cd ansible
 
                     ansible --version
+
                     ansible-playbook site.yml --syntax-check
                 '''
             }
@@ -76,7 +80,10 @@ pipeline {
         stage('Docker Check') {
             steps {
                 sh '''
+                    echo "Checking Docker..."
+
                     docker version
+
                     docker info
                 '''
             }
@@ -85,53 +92,66 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
+                    set -e
+
                     echo "Building application Docker image..."
 
                     docker build \
-                      -t three-tier-app:${BUILD_NUMBER} \
-                      -t three-tier-app:latest \
-                      .
+                        -t three-tier-app:${BUILD_NUMBER} \
+                        -t three-tier-app:latest \
+                        .
+
+                    echo "Docker images created:"
 
                     docker images | grep three-tier-app
                 '''
             }
         }
-     
-     stage('Docker Test') {
-       steps {
-          sh '''
-            set -e
 
-            echo "Starting test container..."
+        stage('Docker Test') {
+            steps {
+                sh '''
+                    set -e
 
-            docker rm -f three-tier-test 2>/dev/null || true
+                    echo "Starting test container..."
 
-            docker run -d \
-                --name three-tier-test \
-                -p 18080:8080 \
-                three-tier-app:9
+                    docker rm -f three-tier-test 2>/dev/null || true
 
-            echo "Waiting for application..."
+                    docker run -d \
+                        --name three-tier-test \
+                        -p 18080:8080 \
+                        three-tier-app:${BUILD_NUMBER}
 
-            sleep 5
+                    echo "Waiting for application..."
 
-            echo "Container status:"
-            docker ps
+                    sleep 5
 
-            echo "Container logs:"
-            docker logs three-tier-test
+                    echo "Container status:"
 
-            echo "Testing application from Docker host..."
+                    docker ps
 
-            docker exec three-tier-test \
-                python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080').read().decode())"
+                    echo "Container logs:"
 
-            echo "Application test passed!"
-        '''
+                    docker logs three-tier-test
+
+                    echo "Testing application inside container..."
+
+                    docker exec three-tier-test \
+                        python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080').read().decode())"
+
+                    echo "Testing health endpoint..."
+
+                    docker exec three-tier-test \
+                        python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080/health').read().decode())"
+
+                    echo "Docker application test passed!"
+                '''
+            }
         }
-     }
+    }
 
     post {
+
         success {
             echo 'Docker CI pipeline completed successfully!'
         }
