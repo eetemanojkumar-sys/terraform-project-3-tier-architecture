@@ -1,4 +1,4 @@
-pipeline {
+kpipeline {
     agent {
         docker {
             image 'ubuntu:24.04'
@@ -29,7 +29,9 @@ pipeline {
             steps {
                 sh '''
                     export DEBIAN_FRONTEND=noninteractive
+
                     apt-get update
+
                     apt-get install -y \
                         git \
                         curl \
@@ -62,7 +64,9 @@ pipeline {
             steps {
                 sh '''
                     pip3 install --break-system-packages ansible
+
                     cd ansible
+
                     ansible --version
                     ansible-playbook site.yml --syntax-check
                 '''
@@ -77,15 +81,65 @@ pipeline {
                 '''
             }
         }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    echo "Building application Docker image..."
+
+                    docker build \
+                      -t three-tier-app:${BUILD_NUMBER} \
+                      -t three-tier-app:latest \
+                      .
+
+                    docker images | grep three-tier-app
+                '''
+            }
+        }
+
+        stage('Docker Test') {
+            steps {
+                sh '''
+                    echo "Starting test container..."
+
+                    docker rm -f three-tier-test 2>/dev/null || true
+
+                    docker run -d \
+                      --name three-tier-test \
+                      -p 18080:8080 \
+                      three-tier-app:${BUILD_NUMBER}
+
+                    sleep 5
+
+                    echo "Testing application..."
+                    curl -f http://localhost:18080
+
+                    echo
+                    echo "Testing health endpoint..."
+                    curl -f http://localhost:18080/health
+
+                    echo
+                    echo "Docker test successful!"
+
+                    docker rm -f three-tier-test
+                '''
+            }
+        }
     }
 
     post {
         success {
-            echo 'Docker-agent CI pipeline completed successfully!'
+            echo 'Docker CI pipeline completed successfully!'
         }
 
         failure {
-            echo 'Docker-agent CI pipeline failed.'
+            echo 'Docker CI pipeline failed.'
+        }
+
+        always {
+            sh '''
+                docker rm -f three-tier-test 2>/dev/null || true
+            '''
         }
     }
 }
