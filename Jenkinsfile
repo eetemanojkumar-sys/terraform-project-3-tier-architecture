@@ -1,4 +1,4 @@
-kpipeline {
+pipeline {
     agent {
         docker {
             image 'ubuntu:24.04'
