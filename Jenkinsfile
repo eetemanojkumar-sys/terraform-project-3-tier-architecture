@@ -1,21 +1,21 @@
 pipeline {
 
- agent {
-    docker {
-        image 'ubuntu:24.04'
-        args '''
-          --network host
-          -u root
-          -v /var/run/docker.sock:/var/run/docker.sock
-          -v /usr/local/bin/minikube:/usr/local/bin/minikube:ro
-          -v /usr/local/bin/helm:/usr/local/bin/helm:ro
-          -v /usr/local/bin/kubectl:/usr/local/bin/kubectl:ro
-          -v /var/lib/jenkins/.kube:/root/.kube:ro
-          -v /home/ubuntu/.minikube:/home/ubuntu/.minikube:rw
-        '''
-        reuseNode true
+    agent {
+        docker {
+            image 'ubuntu:24.04'
+            args '''
+              --network host
+              -u root
+              -v /var/run/docker.sock:/var/run/docker.sock
+              -v /usr/local/bin/minikube:/usr/local/bin/minikube:ro
+              -v /usr/local/bin/helm:/usr/local/bin/helm:ro
+              -v /usr/local/bin/kubectl:/usr/local/bin/kubectl:ro
+              -v /var/lib/jenkins/.kube:/root/.kube:ro
+              -v /home/ubuntu/.minikube:/home/ubuntu/.minikube:rw
+            '''
+            reuseNode true
         }
-      }
+    }
 
     environment {
         APP_NAME = 'three-tier-app'
@@ -46,9 +46,7 @@ pipeline {
             steps {
                 sh '''
                     export DEBIAN_FRONTEND=noninteractive
-
                     apt-get update
-
                     apt-get install -y \
                         git \
                         curl \
@@ -66,9 +64,7 @@ pipeline {
                     curl -fsSL \
                       https://releases.hashicorp.com/terraform/1.12.2/terraform_1.12.2_linux_amd64.zip \
                       -o /tmp/terraform.zip
-
                     unzip -o /tmp/terraform.zip -d /usr/local/bin
-
                     terraform version
                 '''
             }
@@ -88,9 +84,7 @@ pipeline {
             steps {
                 sh '''
                     pip3 install --break-system-packages ansible
-
                     cd ansible
-
                     ansible --version
                     ansible-playbook site.yml --syntax-check
                 '''
@@ -110,66 +104,57 @@ pipeline {
             steps {
                 sh '''
                     echo "Building application image..."
-
                     docker build \
                       -t ${APP_NAME}:${IMAGE_TAG} \
                       -t ${APP_NAME}:latest \
                       .
-
                     docker images | grep ${APP_NAME}
                 '''
             }
         }
 
-        
         stage('Docker Test') {
-          steps {
-             sh '''
-               set -e
+            steps {
+                sh '''
+                    set -e
+                    echo "Starting application test container..."
 
-               echo "Starting application test container..."
-  
-               docker rm -f three-tier-test 2>/dev/null || true
+                    docker rm -f three-tier-test 2>/dev/null || true
 
-               docker run -d \
-                --name three-tier-test \
-                -p 18080:8080 \
-                three-tier-app:${BUILD_NUMBER}
+                    docker run -d \
+                      --name three-tier-test \
+                      -p 18080:8080 \
+                      ${APP_NAME}:${IMAGE_TAG}
 
-                echo "Waiting for application..."
-                sleep 5
-  
-                echo "Container status:"
-                docker ps
+                    echo "Waiting for application..."
+                    sleep 5
 
-               echo "Container logs:"
-               docker logs three-tier-test
+                    echo "Container status:"
+                    docker ps
 
-               echo "Testing application from inside container..."
- 
-                docker exec three-tier-test \
-                python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080/health').read().decode())"
+                    echo "Container logs:"
+                    docker logs three-tier-test
 
-               echo "Application health check passed!"
+                    echo "Testing application from inside container..."
+                    docker exec three-tier-test \
+                      python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080/health').read().decode())"
 
-              echo "Testing root endpoint..."
+                    echo "Application health check passed!"
 
-              docker exec three-tier-test \
-                python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080/').read().decode())"
+                    echo "Testing root endpoint..."
+                    docker exec three-tier-test \
+                      python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080/').read().decode())"
 
-              echo "Application test passed!"
-            '''
-         }
-     }
+                    echo "Application test passed!"
+                '''
+            }
+        }
 
         stage('Helm Validation') {
             steps {
                 sh '''
                     echo "Validating Helm chart..."
-
-                    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 \
-                      | bash
-
+                    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
                     helm version
                     helm lint ${HELM_CHART}
                     helm template ${HELM_RELEASE} ${HELM_CHART}
@@ -178,48 +163,52 @@ pipeline {
         }
 
         stage('Load Image into Minikube') {
-             steps {
-               sh '''
-                 set -e
+            steps {
+                sh '''
+                    set -e
+                    echo "Loading image into Minikube..."
 
-                   echo "Loading image into Minikube..."
+                    export MINIKUBE_HOME=/home/ubuntu/.minikube
+                    export KUBECONFIG=/root/.kube/config
 
-                   export MINIKUBE_HOME=/home/ubuntu/.minikube
-
-                   minikube status
-
-                   minikube image load ${APP_NAME}:${IMAGE_TAG}
+                    minikube status
+                    minikube image load ${APP_NAME}:${IMAGE_TAG}
 
                     echo "Image loaded successfully!"
-               '''
-          }
-       }
+                '''
+            }
+        }
 
-       stage('Helm Deploy') {
-    steps {
-        sh '''
-            set -e
+        stage('Helm Deploy') {
+            steps {
+                sh '''
+                    set -e
 
-            export KUBECONFIG=/root/.kube/config
-            export MINIKUBE_HOME=/home/ubuntu/.minikube
+                    export KUBECONFIG=/root/.kube/config
+                    export MINIKUBE_HOME=/home/ubuntu/.minikube
 
-            echo "Deploying application with Helm..."
+                    echo "Deploying application with Helm..."
 
-            helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
-              --set image.repository=${APP_NAME} \
-              --set image.tag=${IMAGE_TAG} \
-              --set image.pullPolicy=Never
+                    helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
+                      --set image.repository=${APP_NAME} \
+                      --set image.tag=${IMAGE_TAG} \
+                      --set image.pullPolicy=Never
 
-            helm list
+                    helm list
+                    kubectl get pods
+                    kubectl get svc
+                '''
+            }
+        }
 
-            kubectl get pods
-            kubectl get svc
-        '''
-    }
-  }
         stage('Kubernetes Verification') {
             steps {
                 sh '''
+                    set -e
+
+                    export KUBECONFIG=/root/.kube/config
+                    export MINIKUBE_HOME=/home/ubuntu/.minikube
+
                     echo "Checking Kubernetes deployment..."
 
                     kubectl get deployment
@@ -228,7 +217,6 @@ pipeline {
                     kubectl get ingress
 
                     echo "Waiting for application..."
-
                     sleep 10
 
                     kubectl get pods
@@ -236,25 +224,25 @@ pipeline {
             }
         }
 
-      stage('Application Health Check') {
-         steps {
-           sh '''
-              set -e
+        stage('Application Health Check') {
+            steps {
+                sh '''
+                    set -e
 
-            export MINIKUBE_HOME=/home/ubuntu/.minikube
-            export KUBECONFIG=/root/.kube/config
+                    export MINIKUBE_HOME=/home/ubuntu/.minikube
+                    export KUBECONFIG=/root/.kube/config
 
-            echo "Getting Minikube IP..."
-            minikube status
-            MINIKUBE_IP=$(minikube ip)
+                    echo "Getting Minikube IP..."
+                    minikube status
+                    MINIKUBE_IP=$(minikube ip)
 
-            echo "Minikube IP: $MINIKUBE_IP"
-        '''
+                    echo "Minikube IP: $MINIKUBE_IP"
+                '''
+            }
         }
-     }
+    }
 
     post {
-
         success {
             echo '======================================'
             echo 'CI/CD PIPELINE COMPLETED SUCCESSFULLY'
