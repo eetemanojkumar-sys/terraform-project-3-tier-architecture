@@ -4,10 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ANSIBLE_DIR="$ROOT_DIR/ansible"
 OUTPUTS="$ANSIBLE_DIR/terraform_outputs.json"
-TARGET="$ANSIBLE_DIR/group_vars/all.yml"
+TARGET="$ANSIBLE_DIR/group_vars/all/generated.yml"
 
 cd "$ROOT_DIR"
 terraform output -json > "$OUTPUTS"
+mkdir -p "$(dirname "$TARGET")"
 
 python3 - "$OUTPUTS" "$TARGET" <<'PY'
 import json
