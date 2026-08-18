@@ -112,33 +112,46 @@ pipeline {
             }
         }
 
+        
         stage('Docker Test') {
-            steps {
-                sh '''
-                    set -e
+          steps {
+             sh '''
+               set -e
 
-                    echo "Starting application test container..."
+               echo "Starting application test container..."
+  
+               docker rm -f three-tier-test 2>/dev/null || true
 
-                    docker rm -f three-tier-test 2>/dev/null || true
+               docker run -d \
+                --name three-tier-test \
+                -p 18080:8080 \
+                three-tier-app:${BUILD_NUMBER}
 
-                    docker run -d \
-                      --name three-tier-test \
-                      -p 18080:8080 \
-                      ${APP_NAME}:${IMAGE_TAG}
+                echo "Waiting for application..."
+                sleep 5
+  
+                echo "Container status:"
+                docker ps
 
-                    sleep 5
+               echo "Container logs:"
+               docker logs three-tier-test
 
-                    docker ps
+               echo "Testing application from inside container..."
+ 
+                docker exec three-tier-test \
+                python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080/health').read().decode())"
 
-                    echo "Testing application..."
+               echo "Application health check passed!"
 
-                    curl -f http://localhost:18080/health
+              echo "Testing root endpoint..."
 
-                    echo
-                    echo "Docker application test PASSED!"
-                '''
-            }
-        }
+              docker exec three-tier-test \
+                python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080/').read().decode())"
+
+              echo "Application test passed!"
+            '''
+         }
+     }
 
         stage('Helm Validation') {
             steps {
