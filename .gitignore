@@ -10,3 +10,6 @@ crash.log
 *.tfvars
 !*.tfvars.example
 
+# Ansible generated Terraform values
+ansible/terraform_outputs.json
+ansible/group_vars/all/generated.yml
