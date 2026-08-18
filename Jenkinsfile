@@ -1,20 +1,21 @@
 pipeline {
 
-  agent {
-     docker {
-          image 'ubuntu:24.04'
-          args '''
-            -u root
-            -v /var/run/docker.sock:/var/run/docker.sock
-            -v /usr/local/bin/minikube:/usr/local/bin/minikube:ro
-            -v /usr/local/bin/helm:/usr/local/bin/helm:ro
-            -v /snap/bin/kubectl:/usr/local/bin/kubectl:ro
-            -v /var/lib/jenkins/.kube:/root/.kube:ro
-            -v /home/ubuntu/.minikube:/home/ubuntu/.minikube:ro
-          '''
-          reuseNode true
-       }
-  }
+ agent {
+    docker {
+        image 'ubuntu:24.04'
+        args '''
+          --network host
+          -u root
+          -v /var/run/docker.sock:/var/run/docker.sock
+          -v /usr/local/bin/minikube:/usr/local/bin/minikube:ro
+          -v /usr/local/bin/helm:/usr/local/bin/helm:ro
+          -v /snap/bin/kubectl:/usr/local/bin/kubectl:ro
+          -v /var/lib/jenkins/.kube:/root/.kube:ro
+          -v /home/ubuntu/.minikube:/home/ubuntu/.minikube:ro
+        '''
+        reuseNode true
+        }
+      }
 
     environment {
         APP_NAME = 'three-tier-app'
