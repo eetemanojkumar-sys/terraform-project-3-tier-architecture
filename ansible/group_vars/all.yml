@@ -1,0 +1,8 @@
+---
+# Generated values from Terraform should be placed here by scripts/sync_vars.sh.
+# Do not store passwords or other secrets in Git.
+project_name: ""
+environment: ""
+rds_endpoint: ""
+rds_db_name: ""
+app_port: 80
