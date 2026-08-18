@@ -96,36 +96,40 @@ pipeline {
                 '''
             }
         }
+     
+     stage('Docker Test') {
+       steps {
+          sh '''
+            set -e
 
-        stage('Docker Test') {
-            steps {
-                sh '''
-                    echo "Starting test container..."
+            echo "Starting test container..."
 
-                    docker rm -f three-tier-test 2>/dev/null || true
+            docker rm -f three-tier-test 2>/dev/null || true
 
-                    docker run -d \
-                      --name three-tier-test \
-                      -p 18080:8080 \
-                      three-tier-app:${BUILD_NUMBER}
+            docker run -d \
+                --name three-tier-test \
+                -p 18080:8080 \
+                three-tier-app:9
 
-                    sleep 5
+            echo "Waiting for application..."
 
-                    echo "Testing application..."
-                    curl -f http://localhost:18080
+            sleep 5
 
-                    echo
-                    echo "Testing health endpoint..."
-                    curl -f http://localhost:18080/health
+            echo "Container status:"
+            docker ps
 
-                    echo
-                    echo "Docker test successful!"
+            echo "Container logs:"
+            docker logs three-tier-test
 
-                    docker rm -f three-tier-test
-                '''
-            }
+            echo "Testing application from Docker host..."
+
+            docker exec three-tier-test \
+                python3 -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8080').read().decode())"
+
+            echo "Application test passed!"
+        '''
         }
-    }
+     }
 
     post {
         success {
