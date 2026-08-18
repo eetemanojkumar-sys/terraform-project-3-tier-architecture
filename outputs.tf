@@ -9,6 +9,23 @@ output "rds_endpoint" {
   sensitive   = true
 }
 
+output "rds_db_name" {
+  description = "Application database name for Ansible configuration"
+  value       = var.db_name
+}
+
+output "project_name" {
+  value = var.project_name
+}
+
+output "environment" {
+  value = var.environment
+}
+
+output "app_port" {
+  value = var.app_port
+}
+
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
