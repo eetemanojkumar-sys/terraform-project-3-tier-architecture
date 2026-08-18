@@ -1,16 +1,69 @@
-# AWS 3-Tier Architecture with Terraform
+# AWS 3-Tier Architecture — End-to-End DevOps Project
 
 ## Project Overview
 
-This project provisions a highly available **3-tier architecture on AWS using Terraform**.
+This project implements an end-to-end **AWS 3-tier architecture and DevOps delivery pipeline**.
 
-The infrastructure is built using reusable Terraform modules and includes networking, load balancing, Auto Scaling, a private database tier, security groups, and remote Terraform state management.
+The infrastructure is provisioned with **Terraform**, configured with **Ansible**, containerized with **Docker**, automated with **Jenkins**, deployed to **Kubernetes using Helm**, and monitored with **Prometheus and Grafana**.
 
-The project was deployed and tested in the **AWS Mumbai Region (`ap-south-1`)**.
+The project was developed and tested in the **AWS Mumbai Region (`ap-south-1`)**.
+
+The goal is to demonstrate a realistic DevOps workflow from infrastructure provisioning through application delivery, Kubernetes deployment, verification, and monitoring.
 
 ---
 
-## Architecture
+## End-to-End DevOps Flow
+
+```text
+Developer
+   |
+   v
+GitHub Repository
+   |
+   v
+Jenkins CI/CD
+   |
+   +--------------------+
+   |                    |
+   v                    v
+Terraform            Ansible
+   |                    |
+   +---------+----------+
+             |
+             v
+        AWS Infrastructure
+             |
+             v
+          Docker
+             |
+             v
+       Docker Image Build
+             |
+             v
+       Docker Application Test
+             |
+             v
+        Helm Validation
+             |
+             v
+          Minikube
+             |
+             v
+       Helm Deployment
+             |
+             v
+        Kubernetes
+             |
+             v
+     Application Health Check
+             |
+             v
+   Prometheus + Grafana
+```
+
+---
+
+# Architecture
 
 ```text
                          Internet
@@ -35,11 +88,35 @@ The project was deployed and tested in the **AWS Mumbai Region (`ap-south-1`)**.
                     Amazon RDS
                       MySQL
                 Private DB Subnets
+
+                       |
+                       | DevOps Delivery
+                       v
+                 Jenkins CI/CD
+                       |
+                       v
+                    Docker
+                       |
+                       v
+                   Minikube
+                       |
+                       v
+                   Kubernetes
+                       |
+                       v
+                      Helm
+                       |
+                       v
+              Prometheus + Grafana
 ```
 
 ---
 
-## AWS Services Used
+# AWS Infrastructure
+
+Terraform provisions the main AWS infrastructure using reusable modules.
+
+## AWS Services
 
 - Amazon VPC
 - Public and Private Subnets
@@ -56,17 +133,11 @@ The project was deployed and tested in the **AWS Mumbai Region (`ap-south-1`)**.
 - Amazon S3
 - AWS IAM
 
----
-
-## Network Architecture
-
-The infrastructure uses a VPC with the following CIDR:
+## Network CIDR
 
 ```text
-10.0.0.0/16
+VPC: 10.0.0.0/16
 ```
-
-Subnets:
 
 | Tier | CIDR |
 |---|---|
@@ -77,53 +148,27 @@ Subnets:
 | Private DB Subnet 1 | `10.0.21.0/24` |
 | Private DB Subnet 2 | `10.0.22.0/24` |
 
-Resources are distributed across multiple Availability Zones.
+The infrastructure is distributed across multiple Availability Zones for high availability.
 
 ---
 
-## Terraform Project Structure
+# Terraform
 
-```text
-terraform-project-3-tier-architecture/
-│
-├── main.tf
-├── provider.tf
-├── variables.tf
-├── outputs.tf
-├── backend.tf
-├── terraform.tfvars.example
-├── .terraform.lock.hcl
-├── .gitignore
-│
-└── modules/
-    ├── vpc/
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── outputs.tf
-    │
-    ├── alb/
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── outputs.tf
-    │
-    ├── ec2/
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── outputs.tf
-    │
-    └── rds/
-        ├── main.tf
-        ├── variables.tf
-        └── outputs.tf
-```
-
----
+Terraform is used as the Infrastructure as Code layer.
 
 ## Terraform Modules
 
+```text
+modules/
+├── vpc/
+├── alb/
+├── ec2/
+└── rds/
+```
+
 ### VPC Module
 
-Responsible for:
+Creates:
 
 - VPC
 - Public subnets
@@ -132,85 +177,41 @@ Responsible for:
 - Internet Gateway
 - NAT Gateway
 - Route tables
-- Route table associations
+- Route associations
 
 ### ALB Module
 
-Responsible for:
+Creates:
 
 - Application Load Balancer
-- ALB Security Group
-- Target Group
-- HTTP Listener
+- ALB security group
+- Target group
+- HTTP listener
 
 ### EC2 Module
 
-Responsible for:
+Creates:
 
-- EC2 Security Group
-- Launch Template
+- EC2 security group
+- Launch template
 - Auto Scaling Group
-- Target Group integration
+- Target group integration
+- IAM configuration
 
 ### RDS Module
 
-Responsible for:
+Creates:
 
 - RDS MySQL instance
-- DB Subnet Group
-- RDS Security Group
-- Database isolation
+- DB subnet group
+- RDS security group
+- Private database tier
 
 ---
 
-## High Availability
+# Terraform Remote State
 
-The architecture uses multiple Availability Zones.
-
-The Application Load Balancer distributes incoming traffic between application instances managed by an Auto Scaling Group.
-
-Example Auto Scaling configuration:
-
-```text
-Minimum instances: 2
-Desired instances: 2
-Maximum instances: 4
-```
-
----
-
-## Security
-
-The architecture follows tier-based security.
-
-```text
-Internet
-   |
-   | HTTP
-   v
-ALB Security Group
-   |
-   v
-EC2 Security Group
-   |
-   | MySQL
-   v
-RDS Security Group
-```
-
-The database is not directly exposed to the internet.
-
-The RDS Security Group accepts database traffic from the application-tier Security Group.
-
-AWS credentials are not hard-coded in the Terraform source code.
-
-Terraform was executed using an **IAM Role attached to the management EC2 instance**.
-
----
-
-## Terraform Remote State
-
-Terraform state is stored remotely using an **Amazon S3 backend**.
+Terraform state is stored remotely using Amazon S3.
 
 ```hcl
 terraform {
@@ -232,131 +233,549 @@ Remote state provides:
 - State locking
 - Better collaboration support
 
+AWS credentials are not hard-coded in Terraform. The deployment uses an IAM role attached to the management EC2 instance.
+
 ---
 
-## Deployment
+# Ansible Configuration Management
 
-### Clone the repository
+Ansible configures the application and web tiers after infrastructure provisioning.
 
-```bash
-git clone https://github.com/eetemanojkumar-sys/terraform-project-3-tier-architecture.git
+The repository contains:
 
-cd terraform-project-3-tier-architecture
+```text
+ansible/
+├── ansible.cfg
+├── site.yml
+├── group_vars/
+├── inventory/
+├── requirements.yml
+├── roles/
+│   ├── app/
+│   ├── common/
+│   ├── efs/
+│   └── web/
+└── scripts/
 ```
 
-### Initialize Terraform
+Ansible responsibilities include:
 
-```bash
-terraform init
+- Common host configuration
+- Docker installation/configuration
+- Application container deployment
+- Nginx installation and configuration
+- Web-tier configuration
+- EFS-related configuration
+- Application configuration templating
+- Dynamic AWS EC2 inventory
+
+---
+
+# Application
+
+The project includes a lightweight Python HTTP application used for container and Kubernetes validation.
+
+The application exposes:
+
+```text
+GET /
+GET /health
 ```
 
-### Format
+Expected responses:
 
-```bash
-terraform fmt -recursive
+```text
+/
+Three Tier Application
 ```
 
-### Validate
+```text
+/health
+OK
+```
+
+The `/health` endpoint is used by Kubernetes readiness and liveness probes.
+
+---
+
+# Docker
+
+The application is containerized using Docker.
+
+Example image:
+
+```text
+three-tier-app:<BUILD_NUMBER>
+```
+
+The Jenkins pipeline creates both a build-specific tag and a `latest` tag.
+
+Docker validation includes:
+
+- Image build
+- Container startup
+- Application health verification
+- Root endpoint verification
+- Container cleanup
+
+---
+
+# Jenkins CI/CD Pipeline
+
+Jenkins provides the automated CI/CD workflow.
+
+The pipeline uses a Docker-based Jenkins agent and performs the following stages:
+
+```text
+Environment Check
+        ↓
+Checkout
+        ↓
+Install CI Tools
+        ↓
+Terraform Validation
+        ↓
+Ansible Validation
+        ↓
+Docker Check
+        ↓
+Docker Build
+        ↓
+Docker Test
+        ↓
+Helm Validation
+        ↓
+Load Image into Minikube
+        ↓
+Helm Deploy
+        ↓
+Kubernetes Verification
+        ↓
+Application Health Check
+```
+
+## Terraform CI Validation
 
 ```bash
+terraform fmt -check -recursive
+terraform init -backend=false
 terraform validate
 ```
 
-### Preview infrastructure changes
+## Ansible CI Validation
 
 ```bash
-terraform plan
+ansible-playbook site.yml --syntax-check
 ```
 
-### Deploy
+## Docker CI Validation
+
+The pipeline builds the application image and runs a real container test against the application endpoints.
+
+## Helm CI Validation
+
+The pipeline validates the Helm chart with:
 
 ```bash
+helm lint three-tier-chart
+helm template three-tier-app three-tier-chart
+```
+
+## Kubernetes CD
+
+The pipeline loads the application image into Minikube and deploys it using Helm.
+
+The deployment is verified using:
+
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get ingress
+```
+
+The pipeline also waits for Kubernetes resources to become healthy and performs an application health check.
+
+---
+
+# Kubernetes and Helm
+
+The repository contains Kubernetes manifests and a Helm chart.
+
+```text
+three-tier-chart/
+├── Chart.yaml
+├── values.yaml
+└── templates/
+    ├── _helpers.tpl
+    ├── configmap.yaml
+    ├── deployment.yaml
+    ├── hpa.yaml
+    ├── ingress.yaml
+    ├── secret.yaml
+    └── service.yaml
+```
+
+The Helm chart manages:
+
+- Deployment
+- Service
+- ConfigMap
+- Secret
+- Ingress
+- Horizontal Pod Autoscaler
+- Health probes
+- Resource requests and limits
+
+Example application configuration:
+
+```yaml
+replicaCount: 2
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+
+containerPort: 8080
+```
+
+The Kubernetes application uses HTTP readiness and liveness probes against `/health`.
+
+---
+
+# Kubernetes Deployment Validation
+
+The application was successfully deployed to Minikube and verified using Kubernetes commands.
+
+Typical verification:
+
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get ingress
+```
+
+Example application test:
+
+```bash
+curl http://<MINIKUBE-IP>:<NODEPORT>/
+```
+
+Expected response:
+
+```text
+Three Tier Application
+```
+
+Health endpoint:
+
+```bash
+curl http://<MINIKUBE-IP>:<NODEPORT>/health
+```
+
+Expected:
+
+```text
+OK
+```
+
+---
+
+# Monitoring
+
+The Kubernetes environment was integrated with the Prometheus and Grafana monitoring stack.
+
+Components include:
+
+- Prometheus
+- Grafana
+- Alertmanager
+- Prometheus Operator
+- kube-state-metrics
+- Node Exporter
+
+Monitoring services were deployed in the `monitoring` namespace.
+
+Example:
+
+```bash
+kubectl get svc -n monitoring
+```
+
+This provides visibility into Kubernetes workloads, nodes, cluster resources, and application infrastructure.
+
+---
+
+# High Availability
+
+The AWS architecture uses multiple Availability Zones.
+
+Example Auto Scaling configuration:
+
+```text
+Minimum instances: 2
+Desired instances: 2
+Maximum instances: 4
+```
+
+The Application Load Balancer distributes traffic across application instances managed by the Auto Scaling Group.
+
+---
+
+# Security Architecture
+
+The infrastructure follows tier-based security:
+
+```text
+Internet
+   |
+   | HTTP
+   v
+ALB Security Group
+   |
+   v
+EC2 Security Group
+   |
+   | MySQL
+   v
+RDS Security Group
+```
+
+The database tier is private and is not directly exposed to the internet.
+
+The RDS security group accepts database traffic from the application tier rather than from the public internet.
+
+AWS credentials are not hard-coded in source code.
+
+---
+
+# Project Structure
+
+```text
+terraform-project-3-tier-architecture/
+│
+├── main.tf
+├── provider.tf
+├── variables.tf
+├── outputs.tf
+├── backend.tf
+├── terraform.tfvars.example
+├── Dockerfile
+├── .dockerignore
+├── Jenkinsfile
+├── README.md
+│
+├── app/
+│   ├── Dockerfile
+│   └── health.py
+│
+├── ansible/
+│   ├── ansible.cfg
+│   ├── site.yml
+│   ├── group_vars/
+│   ├── inventory/
+│   ├── scripts/
+│   └── roles/
+│
+├── modules/
+│   ├── vpc/
+│   ├── alb/
+│   ├── ec2/
+│   └── rds/
+│
+├── k8s/
+│   ├── deployment.yml
+│   └── service.yml
+│
+└── three-tier-chart/
+    ├── Chart.yaml
+    ├── values.yaml
+    └── templates/
+```
+
+---
+
+# Deployment Commands
+
+## Clone
+
+```bash
+git clone https://github.com/eetemanojkumar-sys/terraform-project-3-tier-architecture.git
+cd terraform-project-3-tier-architecture
+```
+
+## Terraform
+
+```bash
+terraform init
+terraform fmt -recursive
+terraform validate
+terraform plan
 terraform apply
 ```
 
----
-
-## Infrastructure Validation
-
-After deployment, Terraform state can be inspected using:
+## Ansible
 
 ```bash
-terraform state list
+cd ansible
+ansible-playbook site.yml --syntax-check
+ansible-playbook site.yml
 ```
 
-A second:
+## Docker
 
 ```bash
-terraform plan
+docker build -t three-tier-app:latest .
+docker run -d --name three-tier-app -p 8080:8080 three-tier-app:latest
+curl http://localhost:8080/health
 ```
 
-was used to verify infrastructure consistency.
+## Helm
 
-The deployed environment returned:
-
-```text
-No changes. Your infrastructure matches the configuration.
+```bash
+helm lint three-tier-chart
+helm template three-tier-app three-tier-chart
+helm upgrade --install three-tier-app three-tier-chart
 ```
 
-This confirmed that the Terraform state and deployed AWS infrastructure were synchronized.
+## Kubernetes
+
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get ingress
+```
+
+## Monitoring
+
+```bash
+kubectl get pods -n monitoring
+kubectl get svc -n monitoring
+```
 
 ---
 
-## Destroying the Infrastructure
+# Troubleshooting Experience
 
-Because the infrastructure is completely managed through Terraform, it can also be removed using:
+During development, the project was debugged through several real CI/CD and infrastructure issues, including:
 
-```bash
-terraform destroy
-```
+- Terraform undeclared resource and syntax errors
+- Ansible inventory and host-pattern issues
+- Docker daemon socket permission problems
+- Jenkins Docker-agent package installation permissions
+- Jenkins Docker-agent to Minikube networking
+- Minikube profile and kubeconfig access
+- Minikube read-only cache permissions
+- Snap-based `kubectl` incompatibility inside the Jenkins container
+- Helm chart validation errors
+- Kubernetes service and NodePort verification
+- Jenkinsfile Groovy brace/syntax errors
+- Docker port conflicts
 
-The environment was destroyed after testing and documentation to avoid unnecessary AWS charges.
-
-The Terraform code remains reproducible and can recreate the architecture when required.
+The final Jenkins pipeline successfully completed the complete CI/CD flow from Docker build and testing through Helm deployment and Kubernetes application health verification.
 
 ---
 
-## Skills Demonstrated
+# Skills Demonstrated
 
-- Terraform Infrastructure as Code
+### Cloud & Infrastructure
+
+- AWS
+- Terraform
 - Terraform Modules
-- Terraform Remote State
-- AWS VPC Networking
+- VPC Networking
 - Multi-AZ Architecture
-- Public/Private Subnet Design
-- Application Load Balancing
-- EC2 Auto Scaling
-- Amazon RDS
+- ALB
+- EC2
+- Auto Scaling
+- RDS
+- IAM
+- S3 Remote State
 - Security Groups
 - NAT Gateway
-- IAM Roles
+
+### Configuration Management
+
+- Ansible
+- Dynamic AWS Inventory
+- Jinja2 Templates
+- Linux Administration
+
+### Containers
+
+- Docker
+- Docker Images
+- Docker Containers
+- Container Health Checks
+
+### CI/CD
+
+- Jenkins
+- Declarative Pipeline
+- Docker-based Jenkins Agents
+- Automated Validation
+- Automated Deployment
+- Build-specific Image Tagging
+
+### Kubernetes
+
+- Kubernetes
+- Minikube
+- Deployments
+- Services
+- ConfigMaps
+- Secrets
+- Ingress
+- Horizontal Pod Autoscaling
+- Readiness Probes
+- Liveness Probes
+- Helm
+
+### Monitoring
+
+- Prometheus
+- Grafana
+- Alertmanager
+- kube-state-metrics
+- Node Exporter
+
+### Version Control
+
 - Git
 - GitHub
-- Linux
-- Infrastructure lifecycle management
 
 ---
 
-## Deployment Evidence
+# Project Outcome
 
-Deployment screenshots will be added to this repository showing:
+The project demonstrates a complete DevOps lifecycle:
 
-- Terraform deployment and validation
-- VPC and subnet configuration
-- Route tables
-- Application Load Balancer
-- Target Group
-- Auto Scaling Group
-- EC2 instances
-- Amazon RDS
-- S3 remote Terraform state
+```text
+Infrastructure as Code
+        ↓
+Configuration Management
+        ↓
+Containerization
+        ↓
+Continuous Integration
+        ↓
+Helm Packaging
+        ↓
+Kubernetes Deployment
+        ↓
+Automated Verification
+        ↓
+Monitoring
+```
+
+The final CI/CD pipeline was successfully executed end-to-end.
 
 ---
 
-## Author
+# Author
 
 **Manoj Kumar**
 
 Cloud & DevOps
 
-AWS | Terraform | Jenkins | Docker | Kubernetes | Ansible | Linux | Git
+**Technologies:** AWS | Terraform | Ansible | Jenkins | Docker | Kubernetes | Helm | Prometheus | Grafana | Linux | Git | GitHub
